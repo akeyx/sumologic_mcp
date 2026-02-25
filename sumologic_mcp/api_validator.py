@@ -135,8 +135,10 @@ class SumoLogicAPIValidator:
                     api_endpoint="search API"
                 )
         
-        # Validate each parameter
+        # Validate each parameter (skip None so defaults get applied below)
         for param_name, param_value in params.items():
+            if param_value is None:
+                continue
             if param_name not in schema:
                 # Allow unknown parameters but log warning
                 validated_params[param_name] = param_value
