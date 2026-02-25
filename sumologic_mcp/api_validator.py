@@ -107,6 +107,7 @@ class SumoLogicAPIValidator:
         r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)?$'
     )
     RELATIVE_TIME_PATTERN = re.compile(r'^-?\d+[smhdw]$|^now$')
+    EPOCH_PATTERN = re.compile(r'^\d{10,13}$')
     
     @classmethod
     def validate_search_params(cls, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -336,8 +337,12 @@ class SumoLogicAPIValidator:
         # Check if it matches relative time format
         if cls.RELATIVE_TIME_PATTERN.match(time_value):
             return
-        
-        # Neither format matched
+
+        # Check if it matches epoch time format (seconds or milliseconds)
+        if cls.EPOCH_PATTERN.match(time_value):
+            return
+
+        # No format matched
         raise TimeValidationError(
             f"Invalid time format for parameter '{param_name}'",
             time_value,
