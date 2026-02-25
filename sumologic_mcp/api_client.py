@@ -819,37 +819,56 @@ class SumoLogicAPIClient:
                     search_state=job_state
                 )
             
-            # Get messages (log records)
+            # Try /records first (for aggregate queries), fall back to /messages.
+            # If both are empty, return empty results gracefully.
             params = {
                 "offset": offset,
                 "limit": limit
             }
-            
-            response = await self._make_request(
-                method="GET",
-                endpoint=f"/api/v1/search/jobs/{job_id}/messages",
-                params=params,
-                operation_type="search_results"
-            )
-            
-            results = await self._parse_json_response(response)
-            
+
+            result_type = "records"
+            try:
+                response = await self._make_request(
+                    method="GET",
+                    endpoint=f"/api/v1/search/jobs/{job_id}/records",
+                    params=params,
+                    operation_type="search_results"
+                )
+                results = await self._parse_json_response(response)
+            except Exception:
+                results = {"records": [], "fields": []}
+
+            if not results.get("records"):
+                # No records — try messages (may also be empty for no-match queries)
+                result_type = "messages"
+                try:
+                    response = await self._make_request(
+                        method="GET",
+                        endpoint=f"/api/v1/search/jobs/{job_id}/messages",
+                        params=params,
+                        operation_type="search_results"
+                    )
+                    results = await self._parse_json_response(response)
+                except Exception:
+                    results = {"messages": [], "fields": []}
+
             logger.info(
                 f"Retrieved search results",
                 extra={
                     "job_id": job_id,
-                    "returned_count": len(results.get("messages", [])),
+                    "result_type": result_type,
+                    "returned_count": len(results.get(result_type, [])),
                     "offset": offset,
                     "limit": limit
                 }
             )
-            
+
             # Combine with job status for complete result
             return {
                 "job_id": job_id,
                 "status": status,
                 "results": results,
-                "messages": results.get("messages", []),
+                "messages": results.get(result_type, []),
                 "fields": results.get("fields", [])
             }
             
