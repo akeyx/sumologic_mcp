@@ -1559,13 +1559,12 @@ class SumoLogicAPIClient:
     
     # Collector and Source API Methods
     
-    async def list_collectors(self, limit: int = 100, offset: int = 0, filter_type: Optional[str] = None) -> Dict[str, Any]:
+    async def list_collectors(self, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
         """List collectors with pagination.
 
         Args:
             limit: Maximum collectors to return (1-1000)
             offset: Result offset for pagination
-            filter_type: Optional filter — "Installable", "Hosted", or "All"
 
         Returns:
             Dictionary containing collectors list and metadata
@@ -1607,12 +1606,6 @@ class SumoLogicAPIClient:
             )
             
             result = await self._parse_json_response(response)
-
-            if filter_type and filter_type != "All":
-                result["collectors"] = [
-                    c for c in result.get("collectors", [])
-                    if c.get("collectorType") == filter_type
-                ]
 
             logger.info(
                 f"Retrieved {len(result.get('collectors', []))} collectors",
