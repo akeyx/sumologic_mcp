@@ -168,8 +168,13 @@ class CollectorTools:
             # Format collector data
             collector = collector_response.get("collector", collector_response)
             
-            # Get sources for this collector
-            sources = collector.get("sources", [])
+            # Get sources for this collector (requires separate API call)
+            try:
+                sources_response = await self.api_client.list_sources(collector_id)
+                sources = sources_response.get("sources", [])
+            except Exception as e:
+                logger.warning(f"Failed to fetch sources for collector {collector_id}: {e}")
+                sources = []
             formatted_sources = []
             
             for source in sources:
