@@ -75,10 +75,17 @@ class SumoLogicAPIClient:
             )
         )
         
+        # Only transient/infra-class failures should count toward opening the
+        # circuit. Bare `Exception` would mean user errors (e.g. invalid query
+        # syntax → 4xx, validation errors) also count, which can trip the
+        # breaker on benign batches of work and degrade tools unnecessarily.
         circuit_breaker_config = CircuitBreakerConfig(
             failure_threshold=max(5, self.config.max_retries * 2),
             recovery_timeout=60.0,
-            expected_exception=Exception,
+            expected_exception=(
+                APIError, RateLimitError, TimeoutError,
+                ConnectionError, OSError, httpx.RequestError,
+            ),
             success_threshold=3
         )
         
