@@ -24,6 +24,7 @@ from .monitoring import MonitoringManager
 from .tools.api_tools import APITools
 from .tools.collector_tools import CollectorTools
 from .tools.dashboard_tools import DashboardTools
+from .tools.folder_tools import FolderTools
 from .tools.metrics_tools import MetricsTools
 from .tools.monitor_tools import MonitorTools
 from .tools.search_tools import SearchTools
@@ -54,6 +55,7 @@ class SumoLogicMCPServer:
         self.metrics_tools: Optional[MetricsTools] = None
         self.collector_tools: Optional[CollectorTools] = None
         self.monitor_tools: Optional[MonitorTools] = None
+        self.folder_tools: Optional[FolderTools] = None
         self.api_tools: Optional[APITools] = None
 
         # Tool registry
@@ -97,6 +99,7 @@ class SumoLogicMCPServer:
             self.metrics_tools = MetricsTools(self.api_client)
             self.collector_tools = CollectorTools(self.api_client)
             self.monitor_tools = MonitorTools(self.api_client)
+            self.folder_tools = FolderTools(self.api_client)
             self.api_tools = APITools(self.api_client)
 
             # Start monitoring
@@ -236,6 +239,10 @@ class SumoLogicMCPServer:
             monitor_tool_defs = self.monitor_tools.get_tool_definitions()
             all_tools.extend(monitor_tool_defs)
 
+            # Get folder tools
+            folder_tool_defs = self.folder_tools.get_tool_definitions()
+            all_tools.extend(folder_tool_defs)
+
             # Get api tools
             api_tool_defs = self.api_tools.get_tool_definitions()
             all_tools.extend(api_tool_defs)
@@ -278,6 +285,8 @@ class SumoLogicMCPServer:
                     handler = getattr(self.collector_tools, tool_name)
                 elif tool_name in [t["name"] for t in monitor_tool_defs]:
                     handler = getattr(self.monitor_tools, tool_name)
+                elif tool_name in [t["name"] for t in folder_tool_defs]:
+                    handler = getattr(self.folder_tools, tool_name)
                 elif tool_name in [t["name"] for t in api_tool_defs]:
                     handler = getattr(self.api_tools, tool_name)
                 else:
@@ -307,6 +316,7 @@ class SumoLogicMCPServer:
                 metrics_tools=len(metrics_tool_defs),
                 collector_tools=len(collector_tool_defs),
                 monitor_tools=len(monitor_tool_defs),
+                folder_tools=len(folder_tool_defs),
                 api_tools=len(api_tool_defs),
             )
 

@@ -4257,3 +4257,243 @@ class SumoLogicAPIClient:
                 best_endpoint = endpoint_name
 
         return best_endpoint
+
+    async def get_personal_folder_root(self) -> Dict[str, Any]:
+        """Get the root of the user's personal content folder.
+
+        Returns:
+            Dictionary containing personal folder configuration
+
+        Raises:
+            APIError: If API request fails
+        """
+        logger.debug("Retrieving personal folder root")
+        try:
+            response = await self._make_request(
+                method="GET",
+                endpoint="/api/v2/content/folders/personal",
+                operation_type="folder",
+            )
+            return await self._parse_json_response(response)
+        except APIError as e:
+            raise APIError(
+                f"Failed to get personal folder root: {e.message}",
+                status_code=e.status_code,
+                response_body=e.response_body,
+                request_id=e.request_id,
+            ) from e
+
+    async def get_global_folder_root(self) -> Dict[str, Any]:
+        """Get the root of the organization's global content folder.
+
+        Returns:
+            Dictionary containing global folder configuration
+
+        Raises:
+            APIError: If API request fails
+        """
+        logger.debug("Retrieving global folder root")
+        try:
+            response = await self._make_request(
+                method="GET",
+                endpoint="/api/v2/content/folders/global",
+                operation_type="folder",
+            )
+            return await self._parse_json_response(response)
+        except APIError as e:
+            raise APIError(
+                f"Failed to get global folder root: {e.message}",
+                status_code=e.status_code,
+                response_body=e.response_body,
+                request_id=e.request_id,
+            ) from e
+
+    async def get_folder(self, folder_id: str) -> Dict[str, Any]:
+        """Get specific folder configuration, metadata, and contents.
+
+        Args:
+            folder_id: Folder ID to retrieve
+
+        Returns:
+            Dictionary containing folder configuration and child items
+
+        Raises:
+            APIParameterError: If folder_id is invalid
+            APIError: If API request fails
+        """
+        if not folder_id or not folder_id.strip():
+            raise APIParameterError(
+                param_name="folder_id",
+                param_value=folder_id,
+                expected_type="non-empty string representing a valid folder ID",
+                api_endpoint="folder retrieval API",
+            )
+
+        folder_id = folder_id.strip()
+        logger.debug(f"Retrieving folder {folder_id}")
+
+        try:
+            response = await self._make_request(
+                method="GET",
+                endpoint=f"/api/v2/content/{folder_id}",
+                operation_type="folder",
+            )
+            return await self._parse_json_response(response)
+        except APIError as e:
+            raise APIError(
+                f"Failed to get folder {folder_id}: {e.message}",
+                status_code=e.status_code,
+                response_body=e.response_body,
+                request_id=e.request_id,
+                context={"folder_id": folder_id},
+            ) from e
+
+    async def create_folder(
+        self, name: str, parent_id: str, description: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Create a new folder in the content library.
+
+        Args:
+            name: Folder name
+            parent_id: Parent folder ID
+            description: Optional folder description
+
+        Returns:
+            Dictionary containing created folder information
+
+        Raises:
+            APIParameterError: If name or parent_id is invalid
+            APIError: If API request fails
+        """
+        if not name or not name.strip():
+            raise APIParameterError(
+                param_name="name",
+                param_value=name,
+                expected_type="non-empty string representing a valid folder name",
+                api_endpoint="create folder API",
+            )
+        if not parent_id or not parent_id.strip():
+            raise APIParameterError(
+                param_name="parent_id",
+                param_value=parent_id,
+                expected_type="non-empty string representing a valid parent folder ID",
+                api_endpoint="create folder API",
+            )
+
+        name = name.strip()
+        parent_id = parent_id.strip()
+        
+        payload = {
+            "name": name,
+            "parentId": parent_id
+        }
+        if description:
+            payload["description"] = description.strip()
+
+        logger.info(f"Creating folder '{name}' under parent {parent_id}")
+
+        try:
+            response = await self._make_request(
+                method="POST",
+                endpoint="/api/v2/content/folders",
+                json_data=payload,
+                operation_type="folder",
+            )
+            return await self._parse_json_response(response)
+        except APIError as e:
+            raise APIError(
+                f"Failed to create folder '{name}': {e.message}",
+                status_code=e.status_code,
+                response_body=e.response_body,
+                request_id=e.request_id,
+                context={"name": name, "parent_id": parent_id},
+            ) from e
+
+    async def delete_folder_job(self, folder_id: str) -> Dict[str, Any]:
+        """Start asynchronous delete job for a folder or content item.
+
+        Args:
+            folder_id: Folder or content item ID to delete
+
+        Returns:
+            Dictionary containing deletion job ID
+
+        Raises:
+            APIParameterError: If folder_id is invalid
+            APIError: If API request fails
+        """
+        if not folder_id or not folder_id.strip():
+            raise APIParameterError(
+                param_name="folder_id",
+                param_value=folder_id,
+                expected_type="non-empty string representing a valid folder ID",
+                api_endpoint="delete folder API",
+            )
+
+        folder_id = folder_id.strip()
+        logger.info(f"Starting delete job for folder/content {folder_id}")
+
+        try:
+            response = await self._make_request(
+                method="DELETE",
+                endpoint=f"/api/v2/content/{folder_id}/delete",
+                operation_type="folder",
+            )
+            return await self._parse_json_response(response)
+        except APIError as e:
+            raise APIError(
+                f"Failed to start delete job for folder {folder_id}: {e.message}",
+                status_code=e.status_code,
+                response_body=e.response_body,
+                request_id=e.request_id,
+                context={"folder_id": folder_id},
+            ) from e
+
+    async def get_delete_folder_status(self, folder_id: str, job_id: str) -> Dict[str, Any]:
+        """Get status of a folder/content deletion job.
+
+        Args:
+            folder_id: Folder or content item ID
+            job_id: Deletion job ID
+
+        Returns:
+            Dictionary containing deletion job status
+
+        Raises:
+            APIParameterError: If folder_id or job_id is invalid
+            APIError: If API request fails
+        """
+        if not folder_id or not folder_id.strip():
+            raise APIParameterError(
+                param_name="folder_id",
+                param_value=folder_id,
+                expected_type="non-empty string representing a valid folder ID",
+                api_endpoint="delete folder status API",
+            )
+        if not job_id or not job_id.strip():
+            raise APIParameterError(
+                param_name="job_id",
+                param_value=job_id,
+                expected_type="non-empty string representing a valid deletion job ID",
+                api_endpoint="delete folder status API",
+            )
+
+        folder_id = folder_id.strip()
+        job_id = job_id.strip()
+        logger.debug(f"Checking delete job status for folder {folder_id}, job {job_id}")
+
+        try:
+            response = await self._make_request(
+                method="GET",
+                endpoint=f"/api/v2/content/{folder_id}/delete/{job_id}/status",
+                operation_type="folder",
+            )
+            return await self._parse_json_response(response)
+        except APIError as e:
+            raise APIError(
+                f"Failed to check delete job status for folder {folder_id}: {e.message}",
+                status_code=e.status_code,
+                response_body=e.response_body,
+                request_id=e.request_id,
+                context={"folder_id": folder_id, "job_id": job_id},
+            ) from e
