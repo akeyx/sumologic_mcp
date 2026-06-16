@@ -3420,13 +3420,16 @@ class SumoLogicAPIClient:
 
         except APIError as e:
             if e.status_code == 404:
-                raise APIError(
-                    f"Monitor not found: {monitor_id}",
-                    status_code=404,
-                    response_body=e.response_body,
-                    request_id=e.request_id,
-                    context={"monitor_id": monitor_id},
-                ) from e
+                logger.warning(
+                    f"Monitor history endpoint returned 404 for monitor {monitor_id}. "
+                    "This endpoint is not supported by the public Sumo Logic REST APIs in this deployment.",
+                    extra={"monitor_id": monitor_id},
+                )
+                return {
+                    "data": [],
+                    "total": 0,
+                    "warning": "Monitor execution history is not publicly supported by the Sumo Logic API.",
+                }
             elif e.status_code == 403:
                 raise APIError(
                     f"Insufficient permissions to access monitor history: {monitor_id}",
@@ -3744,17 +3747,15 @@ class SumoLogicAPIClient:
         """
         endpoint_name = endpoint_config["name"]
 
-        # Ensure response_data is a dictionary
-        if not isinstance(response_data, dict):
+        # Ensure response_data is a dictionary or a list
+        if not isinstance(response_data, (dict, list)):
             logger.warning(
-                f"Unexpected response format from {endpoint_name}: expected dict, got {type(response_data)}"
+                f"Unexpected response format from {endpoint_name}: expected dict or list, got {type(response_data)}"
             )
+            response_data = {"data": []}
+        elif isinstance(response_data, list):
             # If response_data is a list, treat it as the data array
-            if isinstance(response_data, list):
-                response_data = {"data": response_data}
-            else:
-                # For other types, return empty result
-                response_data = {"data": []}
+            response_data = {"data": response_data}
 
         # Handle different response formats based on endpoint type
         if "search" in endpoint_name:
